@@ -1,33 +1,43 @@
 package com.example.currencyconverter.data
 
+import android.content.ContentValues.TAG
+import android.util.Log
 import androidx.lifecycle.*
+import com.example.currencyconverter.data.utils.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(private val repository: Repository) : ViewModel() {
 
-    private lateinit var currency1: String
-    private lateinit var currency2: String
-    private  var amount: Double = 0.0
+    private  var currency1: String = ""
+    private  var currency2: String = ""
+    private var amount: Double = 0.0
 
-    val tes : MutableLiveData<Double> = MutableLiveData()
-    fun setCurrency(currency1: String,currency2: String,amount: Double){
+
+    fun setCurrency(currency1: String, currency2: String, amount: Double) {
         this.currency1 = currency1
         this.currency2 = currency2
         this.amount = amount
-
     }
 
-
-    fun getCurrency(): LiveData<Double> {
-        return liveData {
-            repository.getCurrency(
+    fun getResult(): LiveData<Resource<Double>>{
+        return liveData(Dispatchers.IO) {
+            emit(Resource.Loading<Double>())
+            val response = repository.getS(
                 currency1 = currency1,
                 currency2 = currency2,
                 amount = amount
-            ).conversionResult?.let { this.emit(it) }
+            )
+            val result = response.body()
+            if (response.isSuccessful && result != null){
+                result.conversionResult?.let {
+                    emit(Resource.Succes(it))
+                }
+            }
+            else emit(Resource.Error<Double>(response.code().toString()))
         }
     }
-
 }
